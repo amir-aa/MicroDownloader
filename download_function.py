@@ -52,7 +52,7 @@ def download_file_with_progress_limited(url, destination,action_id,chunksize=819
 
         with requests.get(url, stream=True) as response:
             response.raise_for_status()
-            LIMIT=0.5 #MBps
+            LIMIT=float(conf.get("AppConfig","MBpslimit")) #MBps
             Limit_cycle=((LIMIT*1024)/(chunksize//1024))*60 # Howmany chunks should be downloaded in a minute
             starttime=datetime.datetime.now()
             _iterator=0
