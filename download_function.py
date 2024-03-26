@@ -2,6 +2,7 @@ import requests,logging
 from tqdm import tqdm  
 import datetime,time
 import configparser
+from client import TCPConnection
 conf=configparser.ConfigParser()
 conf.read("configs.ini")
 def download_file_with_progress(url, destination,action_id,chunksize=8192):
@@ -19,7 +20,7 @@ def download_file_with_progress(url, destination,action_id,chunksize=8192):
 
         with requests.get(url, stream=True) as response:
             response.raise_for_status()
-
+            tcp_connection=TCPConnection()
             with open(destination, 'wb') as file, tqdm(
                 desc="Downloading",
                 total=file_size,
@@ -28,6 +29,9 @@ def download_file_with_progress(url, destination,action_id,chunksize=8192):
                 unit_divisor=1024,
             ) as progress_bar:
                 for chunk in response.iter_content(chunk_size=chunksize):
+                    tcp_connection.send(chunk)#send to ultraTCP
+                    tcp_connection.disconnect()
+                    del tcp_connection
                     file.write(chunk)
                     progress_bar.update(len(chunk))
 
@@ -52,6 +56,7 @@ def download_file_with_progress_limited(url, destination,action_id,chunksize=819
 
         with requests.get(url, stream=True) as response:
             response.raise_for_status()
+            tcp_connection=TCPConnection()
             LIMIT=float(conf.get("AppConfig","MBpslimit")) #MBps
             Limit_cycle=((LIMIT*1024)/(chunksize//1024))*60 # Howmany chunks should be downloaded in a minute
             starttime=datetime.datetime.now()
@@ -64,6 +69,9 @@ def download_file_with_progress_limited(url, destination,action_id,chunksize=819
                 unit_divisor=1024,
             ) as progress_bar:
                 for chunk in response.iter_content(chunk_size=chunksize):
+                    tcp_connection.send(chunk)#send to ultraTCP
+                    tcp_connection.disconnect()
+                    del tcp_connection
                     file.write(chunk)
                     progress_bar.update(len(chunk))
                     _iterator+=1
