@@ -1,7 +1,7 @@
 from flask import Flask,jsonify
 from flask import Flask, request, jsonify
 import os,hashlib,secrets
-import threading
+import threading,logging
 from download_function import download_file_with_progress ,download_file_with_progress_limited
 
 def IDGenerator(filedest:str):
@@ -22,6 +22,8 @@ def download():
     url=request.json.get('url')
     filesize=request.json.get('filesize')
     chunksize=request.json.get('chunksize')
+    if not chunksize:
+        chunksize=8192
     if not url:
         return jsonify({'error': 'URL not provided'}), 400
     filename =os.path.basename(url)
@@ -74,20 +76,25 @@ def _download():
     url=request.json.get('url')
     filesize=request.json.get('filesize')
     chunksize=request.json.get('chunksize')
+    if not chunksize:
+        chunksize=8192
     if not url:
         return jsonify({'error': 'URL not provided'}), 400
-    filename =os.path.basename(url)
-    destination_path =f"downloads/{filename}"
-    id=IDGenerator(destination_path)
-    Files_inprogress[id]={'dl':filesize,'filename':filename}
+    try:
+        filename =os.path.basename(url)
+        destination_path =f"downloads/{filename}"
+        id=IDGenerator(destination_path)
+        Files_inprogress[id]={'dl':filesize,'filename':filename}
 
-    #threading to download the file asynchronously
-    download_thread =threading.Thread(target=download_file_with_progress, args=(url,destination_path,id,int(chunksize)))
-    download_thread.start()
-    #Files_inprogress[id]["tr"]=download_thread
+        #threading to download the file asynchronously
+        download_thread =threading.Thread(target=download_file_with_progress, args=(url,destination_path,id,int(chunksize)))
+        download_thread.start()
+        #Files_inprogress[id]["tr"]=download_thread
 
-    return jsonify({'message':'Download started','filename':filename,"ActionID":id}), 200
-
+        return jsonify({'message':'Download started','filename':filename,"ActionID":id}), 200
+    except Exception as ex:
+        logging.error(f"Error on downloading file {filename} ERROR :: {str(ex)}")
+        return jsonify(f"Error on downloading file {filename} "),500
 
 
 if __name__=='__main__':
