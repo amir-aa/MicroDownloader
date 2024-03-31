@@ -1,5 +1,5 @@
 from socket import *
-import requests,configparser,logging
+import requests,configparser,logging,threading
 conf=configparser.ConfigParser()
 conf.read("configs.ini")
 class TCPConnection:
@@ -15,9 +15,14 @@ class TCPConnection:
             self.connID=int(self.sock.recv(256).decode())
         self.chunkiter+=1
         self.byteCounter+=len(data)
+        
     def get_id(self):
         print(self.connID)
-
+        return self.connID
+    def send_in_thread(self,data:bytes):
+        tr=threading.Thread(target=self.send,args=(data,))
+        tr.run()
+        
     def save_file(self,filename:str):
         resp=requests.post(conf.get("AppConfig","ultratcpurl")+f"/save/file/{filename}/{self.connID}")
         if "Chunks written" in resp.text:
